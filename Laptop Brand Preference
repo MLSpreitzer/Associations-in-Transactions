@@ -1,0 +1,343 @@
+#Import Complete Survey Responses 
+library(readr)
+ comp <- read_csv("CompleteResponses.txt", 
+     col_types = cols(salary = col_number(), 
+         age = col_number(), elevel = col_integer(), 
+         car = col_integer(), zipcode = col_integer(), 
+         credit = col_number(), brand = col_factor(levels = c("0", 
+             "1"))))
+ View(comp)
+ 
+#Import incomplete Survey Responses  
+ library(readr)
+ incomp <- read_csv("SurveyIncomplete.txt", 
+                    col_types = cols(salary = col_number(), 
+                                     age = col_integer(), elevel = col_integer(), 
+                                     car = col_integer(), zipcode = col_integer(), 
+                                     credit = col_number(), brand = col_factor(levels = c("0", 
+                                                                                          "1"))))
+ View(incomp)
+ 
+ # %%%%%%%%%%%%  MODEL 1 RF Auto  %%%%%%%%%%%%  
+ #caret model - Automatic Tuning Grid
+ #load library and set seed
+library(caret)
+set.seed(123)
+
+ # define an 75%/25% train/test split of the dataset
+inTraining <- createDataPartition(comp$brand, p = .75, list = FALSE)
+training <- comp[inTraining,]
+testing <- comp[-inTraining,] 
+
+ #10 fold cross validation
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1)
+ 
+#train Random Forest Regression model with a tuneLenght = 1 (trains with 1 mtry value for RandomForest)
+rfFit1 <- train(brand~., data = training, method = "rf", trControl=fitControl, tuneLength = 1)
+
+#training results
+
+rfFit1
+
+# %%%%%%%%%%%%  Predict Model 1 RF %%%%%%%%%%%% 
+
+rfProbs_i <- predict(rfFit1, newdata = testing)
+#To see the initial row of the predicited data
+head(rfProbs_i)
+summary(rfFit1)
+#plot(rfFit1) # -- not applicable because tune - 1
+
+#To determine how the model prioritized each feature
+varImp(rfFit1)
+#to get a plot of the VarImp
+plot(varImp(rfFit1))
+
+rfClasses_i <- predict(rfFit1, newdata = testing)
+str(rfClasses_i)
+
+#exposes number of correct & incorrect predictions of test set
+confusionMatrix(data = rfProbs_i, testing$brand)
+
+postResample(rfProbs_i, testing$brand)
+summary(rfProbs_i)
+plot(rfProbs_i)
+
+
+ # %%%%%%%%%%%%  MODEL 2 RF Auto %%%%%%%%%%%%
+#caret model - Automatic Tuning Grid
+ #load library and set seed
+
+library(caret)
+set.seed(123)
+ 
+ #create a 20% sample of the data
+#comp <- comp[sample(1:nrow(comp), 2000,replace=FALSE),]
+ 
+ # define an 75%/25% train/test split of the dataset
+inTraining <- createDataPartition(comp$brand, p = .75, list = FALSE)
+training <- comp[inTraining,]
+testing <- comp[-inTraining,] 
+ 
+ #10 fold cross validation
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1) 
+ 
+ #train Random Forest Regression model with a tuneLenght = 1 (trains with 1 mtry value for RandomForest)
+rfFit2 <- train(brand~., data = training, method = "rf", trControl=fitControl, tuneLength = 2)
+ 
+ #training results
+
+rfFit2 
+ 
+# %%%%%%%%%%%%  Predict Model 2 RF %%%%%%%%%%%%  
+
+rfProbs_i <- predict(rfFit2, newdata = testing)
+#To see the initial row of the predicited data
+head(rfProbs_i)
+summary(rfFit2)
+plot(rfFit2)
+
+#To determine how the model prioritized each feature
+varImp(rfFit2)
+#to get a plot of the VarImp
+plot(varImp(rfFit2))
+
+rfClasses_i <- predict(rfFit2, newdata = testing)
+str(rfClasses_i)
+
+#exposes number of correct & incorrect predictions of test set
+confusionMatrix(data = rfProbs_i, testing$brand)
+
+postResample(rfProbs_i, testing$brand)
+summary(rfProbs_i)
+plot(rfProbs_i)
+
+
+
+ # %%%%%%%%%%%%  MODEL 3  RF Manual %%%%%%%%%%%%  
+#caret model - Manual Tuning Grid
+#load library and set seed
+
+library(caret)
+set.seed(123)
+
+#create a 20% sample of the data
+#comp <- comp[sample(1:nrow(comp), 2000,replace=FALSE),]
+
+# define an 75%/25% train/test split of the dataset
+inTraining <- createDataPartition(comp$brand, p = .75, list = FALSE)
+training <- comp[inTraining,]
+testing <- comp[-inTraining,] 
+
+#10 fold cross validation
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1) 
+
+#dataframe for manual tuning of mtry
+rfGrid <- expand.grid(mtry=c(1,2,3))
+
+#train Random Forest Regression model
+#note the system time wrapper. system.time()
+#this is used to measure process execution time 
+system.time(rfFitm1 <- train(brand~., data = training, method = "rf", trControl=fitControl, tuneGrid=rfGrid))
+
+#training results
+
+rfFitm1
+
+# %%%%%%%%%%%%  Predict Model 3 RF %%%%%%%%%%%%  
+
+rfProbs_i <- predict(rfFitm1, newdata = testing)
+#To see the initial row of the predicited data
+head(rfProbs_i)
+summary(rfFitm1)
+plot(rfFitm1) # -- not applicable because tune - 1
+
+#To determine how the model prioritized each feature
+varImp(rfFitm1)
+#to get a plot of the VarImp
+plot(varImp(rfFitm1))
+
+rfClasses_i <- predict(rfFitm1, newdata = testing)
+str(rfClasses_i)
+
+#exposes number of correct & incorrect predictions of test set
+confusionMatrix(data = rfProbs_i, testing$brand)
+
+postResample(rfProbs_i, testing$brand)
+summary(rfProbs_i)
+plot(rfProbs_i)
+
+
+# %%%%%%%%%%%%  MODEL 4 RF Random %%%%%%%%%%%%  
+#caret model - Random Tuning Search
+#load library and set seed
+
+library(caret)
+set.seed(123)
+
+#create a 20% sample of the data
+#comp <- comp[sample(1:nrow(comp), 2000,replace=FALSE),]
+
+# define an 75%/25% train/test split of the dataset
+inTraining <- createDataPartition(comp$brand, p = .75, list = FALSE)
+training <- comp[inTraining,]
+testing <- comp[-inTraining,] 
+
+#10 fold cross validation
+rfitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1, search = 'random')
+
+#dataframe for manual tuning of mtry
+rfGrid <- expand.grid(mtry=c(1,2,3))
+
+#train Random Forest Regression model
+rfFitr2 <- train(brand~., data = training, method = "rf", trControl=rfitControl)
+
+#training results
+
+rfFitr2
+
+# %%%%%%%%%%%%  Predict Model 4 RF %%%%%%%%%%%%  
+
+rfProbs_i <- predict(rfFitr2, newdata = testing)
+#To see the initial row of the predicited data
+head(rfProbs_i)
+summary(rfFitr2)
+plot(rfFitr2) # -- not applicable because tune - 1
+
+#To determine how the model prioritized each feature
+varImp(rfFitr2)
+#to get a plot of the VarImp
+plot(varImp(rfFitr2))
+
+rfClasses_i <- predict(rfFitr2, newdata = testing)
+str(rfClasses_i)
+
+#exposes number of correct & incorrect predictions of test set
+confusionMatrix(data = rfProbs_i, testing$brand)
+
+postResample(rfProbs_i, testing$brand)
+summary(rfProbs_i)
+plot(rfProbs_i)
+
+
+
+# %%%%%%%%%%%%  MODEL 1 C50  %%%%%%%%%%%%  
+#caret model - Automatic Tuning Grid
+#load library and set seed
+library(caret)
+library(C50)
+set.seed(123)
+
+#create a 20% sample of the data
+#comp <- comp[sample(1:nrow(comp), 2000,replace=FALSE),]
+
+# define an 75%/25% train/test split of the dataset
+inTraining <- createDataPartition(comp$brand, p = .75, list = FALSE)
+training <- comp[inTraining,]
+testing <- comp[-inTraining,] 
+
+#10 fold cross validation
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1) 
+
+# train model
+c50Fit1 <- train(brand~., data = training, method = "C5.0", trControl=fitControl, tuneLength = 1)
+
+#training results
+
+c50Fit1
+
+# %%%%%%%%%%%%  Predict Model 1 C50 %%%%%%%%%%%% 
+
+C50Probs <- predict(c50Fit1, newdata = testing)
+head(C50Probs)
+plot(c50Fit1)
+varImp(c50Fit1)
+plot(varImp(c50Fit1))
+
+C50Classes <- predict(c50Fit1, newdata = testing)
+str(C50Classes)
+summary(c50Fit1)
+
+summary(C50Probs)
+
+# %%%%%%%%%%%%  MODEL 2 C50  %%%%%%%%%%%%  
+#caret model - Automatic Tuning Grid
+#load library and set seed
+library(caret)
+set.seed(123)
+
+#create a 20% sample of the data
+#comp <- comp[sample(1:nrow(comp), 2000,replace=FALSE),]
+
+# define an 75%/25% train/test split of the dataset
+inTraining <- createDataPartition(comp$brand, p = .75, list = FALSE)
+training <- comp[inTraining,]
+testing <- comp[-inTraining,] 
+
+#10 fold cross validation
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1) 
+
+# train model
+C50Fit2 <- train(brand~., data = training, method = "C5.0", trControl=fitControl, tuneLength = 2)
+
+#training results
+
+C50Fit2 
+
+# %%%%%%%%%%%%  Predict Model 2 C50 %%%%%%%%%%%% 
+
+
+C50Probs <- predict(C50Fit2, newdata = testing)
+head(C50Probs)
+plot(C50Fit2)
+varImp(C50Fit2)
+plot(varImp(C50Fit2))
+
+C50Classes <- predict(C50Fit2, newdata = testing)
+str(C50Classes)
+summary(C50Fit2)
+
+summary(C50Probs)
+
+
+
+# %%%%%%%%%%%%  MODEL 4  RF Manual %%%%%%%%%%%%  
+#This is the best performing model and we will now use it to predict our incomplete survey data
+#caret model - Random Tuning Search
+#load library and set seed
+
+library(caret)
+set.seed(123)
+
+# define an 75%/25% train/test split of the dataset
+inTraining <- createDataPartition(comp$brand, p = .75, list = FALSE)
+training <- comp[inTraining,]
+testing <- comp[-inTraining,] 
+
+#10 fold cross validation
+rfitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1, search = 'random')
+
+#train Random Forest Regression model
+rfFitr2 <- train(brand~., data = training, method = "rf", trControl=rfitControl)
+
+#training results
+
+rfFitr2
+
+
+# %%%%%%%%%%%%  Predict Model 4 RF %%%%%%%%%%%%  
+
+predictions <- predict(rfFitr2,newdata=incomp)
+predictions
+summary(predictions)
+plot(predictions)
+
+#To determine how the model prioritized each feature
+varImp(rfFitr2)
+#to get a plot of the VarImp
+plot(varImp(rfFitr2))
+
+confusionMatrix(data = rfProbs_i, testing$brand)
+
+postResample(predictions, testing$brand)
+summary(predictions)
+plot(predictions)

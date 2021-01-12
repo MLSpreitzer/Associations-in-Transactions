@@ -1,0 +1,249 @@
+#import library 
+library(readr)
+library(caret)
+#install.packages("corrplot")
+library(corrplot)
+
+#Import 'existing' Data
+existing <- read_csv("existingproductattributes2017.txt",
+col_types = cols(ProductType = col_factor(levels = c("PC",
+"Laptop", "Accessories", "Software",
+"Display", "Printer", "PrinterSupplies",
+"ExtendedWarranty", "Netbook", "Tablet",
+"Smartphone", "GameConsole")),ProductNum = col_integer(),
+Price = col_number(), x5StarReviews = col_integer(),
+x4StarReviews = col_integer(), x3StarReviews = col_integer(),
+x2StarReviews = col_integer(), x1StarReviews = col_integer(),
+PositiveServiceReview = col_integer(),
+NegativeServiceReview = col_integer(),
+Recommendproduct = col_number(),
+BestSellersRank = col_integer(),
+ShippingWeight = col_number(), ProductDepth = col_number(),
+ProductWidth = col_number(), ProductHeight = col_number(),
+ProfitMargin = col_number(), Volume = col_integer()))
+#View(existing)
+
+#Import 'new' Data
+new <- read_csv("newproductattributes2017.txt",
+col_types = cols(ProductNum = col_integer(),
+Price = col_number(), x5StarReviews = col_integer(),
+x4StarReviews = col_integer(), x3StarReviews = col_integer(),
+x2StarReviews = col_integer(), x1StarReviews = col_integer(),
+PositiveServiceReview = col_integer(),
+NegativeServiceReview = col_integer(),
+Recommendproduct = col_number(),
+BestSellersRank = col_integer(),
+ShippingWeight = col_number(), ProductDepth = col_number(),
+ProductWidth = col_number(), ProductHeight = col_number(),
+ProfitMargin = col_number(), Volume = col_integer()))
+#View(new)
+
+# dummify existing data 
+newDataFrame1 <- dummyVars("~.", data = existing)
+ready_existing_Data <- data.frame(predict(newDataFrame1, newdata = existing))
+
+
+# dummify new data 
+newDataFrame2 <- dummyVars("~.", data = new)
+ready_new_Data <- data.frame(predict(newDataFrame2, newdata = new))
+
+#need to reanme columns 
+colnames(ready_new_Data)
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypeAccessories"] <- "ProductType.Accessories"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypeGameConsole"] <- "ProductType.GameConsole"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypePC"] <- "ProductType.PC"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypeDisplay"] <- "ProductType.Display"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypeLaptop"] <- "ProductType.Laptop"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypeSmartphone"] <- "ProductType.Smartphone"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypePrinter"] <- "ProductType.Printer"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypeSoftware"] <- "ProductType.Software"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypeExtendedWarranty"] <- "ProductType.ExtendedWarranty"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypeNetbook"] <- "ProductType.Netbook"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypePrinterSupplies"] <- "ProductType.PrinterSupplies"
+names(ready_new_Data)[names(ready_new_Data) == "ProductTypeTablet"] <- "ProductType.Tablet"
+
+#verify columns
+colnames(ready_new_Data)
+
+#Verify Datatypes 
+str(ready_existing_Data)
+str(ready_new_Data)
+
+#Delete attributes with 'NA' data points. 
+ready_existing_Data$BestSellersRank <- NULL
+ready_new_Data$BestSellersRank <- NULL
+
+#ascertain the correlation between all of the features.
+corrData <- cor(readyData)
+corrData
+corrplot(corrData)
+
+#Remove features that are not needed. 
+ready_existing_Data$ProductNum <- NULL
+ready_existing_Data$ProfitMargin <- NULL
+ready_new_Data$ProductNum <- NULL
+ready_new_Data$ProfitMargin <- NULL
+
+
+# %%%%%%%%%%%%%%% Model #0 lm %%%%%%%%%%%%%%% 
+set.seed(998)
+inTraining <- createDataPartition(ready_existing_Data$Volume, p = .8, list = FALSE)
+training <- ready_existing_Data[inTraining,]
+testing <- ready_existing_Data[-inTraining,]
+fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+lm0 <- train(Volume~., data = training, method = "lm", trControl=fitControl)
+lm0 #R2 - 1  #RMSE - 6.756878e-13
+
+lm0pred <- predict(lm0, newdata = testing)
+
+# %%%%%%%%%%%%%%% Model #1 rf %%%%%%%%%%%%%%% 
+set.seed(998)
+inTraining <- createDataPartition(ready_existing_Data$Volume, p = .8, list = FALSE)
+training <- ready_existing_Data[inTraining,]
+testing <- ready_existing_Data[-inTraining,]
+fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+rf1 <- train(Volume~., data = training, method = "rf", trControl=fitControl)
+rf1 #R2  0.8686773  
+
+# %%%%%%%%%%%%%%% Predict #1 rf %%%%%%%%%%%%%%% 
+#create a variable to calulate predicted values
+rf1pred <- predict(rf1, newdata = testing)
+#expose predicted values
+rf1pred
+#predict the accuracy of the predicted values and the ground truth
+postResample(rf1pred, testing$Volume)
+# graph important features. 
+plot(varImp(rf1))
+
+# %%%%%%%%%%%%%%% Model #2 svmLinear %%%%%%%%%%%%%%% 
+
+set.seed(998)
+inTraining <- createDataPartition(ready_existing_Data$Volume, p = .8, list = FALSE)
+training <- ready_existing_Data[inTraining,]
+testing <- ready_existing_Data[-inTraining,]
+fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+svm2 <- train(Volume~., data = training, method = "svmLinear", trControl=fitControl)
+svm2 #R2 = 0.9184433       
+
+# %%%%%%%%%%%%%%% Predict #2 svmLinear %%%%%%%%%%%%%%% 
+svm2pred <- predict(svm2, newdata = testing)
+postResample(svm2pred, testing$Volume)
+
+# %%%%%%%%%%%%%%% Model #3 SVM2 **MIKE RECOMMENDED %%%%%%%%%%%%%%% 
+
+set.seed(998)
+inTraining <- createDataPartition(ready_existing_Data$Volume, p = .8, list = FALSE)
+training <- ready_existing_Data[inTraining,]
+testing <- ready_existing_Data[-inTraining,]
+fitControl <- trainControl(method="repeatedcv", number = 5, repeats=1)
+svm3 <- train(Volume~., data = ready_existing_Data, method = "svmLinear2",trControl = fitControl)
+svm3 #r2 = 0.8811209
+
+# %%%%%%%%%%%%%%% Predict #3 SVM2 **MIKE RECOMMENDED  %%%%%%%%%%%%%%% 
+svm3pred <- predict(svm3, newdata = testing)
+postResample(svm3pred, testing$Volume)
+
+# %%%%%%%%%%%%%%% Model #4 xgbLinear %%%%%%%%%%%%%%% 
+# Split the data into training and test set
+set.seed(998)
+inTraining <- createDataPartition(ready_existing_Data$Volume, p = .8, list = FALSE)
+training <- ready_existing_Data[inTraining,]
+testing <- ready_existing_Data[-inTraining,]
+fitControl <- trainControl(method="repeatedcv", number=5, repeats=1)
+gb4 <- train(Volume~., data = ready_existing_Data, method = "xgbLinear",trControl = fitControl)
+gb4 #R2 = 0.8689470
+
+# %%%%%%%%%%%%%%% Predict #4 xgbLinear %%%%%%%%%%%%%%% 
+gb4pred <- predict(gb4, newdata = testing)
+postResample(gb4pred, testing$Volume)
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+
+#Lets run the same models on the most important features. 
+#Below we have excluded some features from the dataset. 
+ready_existing_Data$x5StarReviews <- NULL
+ready_existing_Data$ShippingWeight <- NULL
+ready_existing_Data$ProductDepth <- NULL
+ready_existing_Data$ProductWidth <- NULL
+ready_existing_Data$ProductHeight <- NULL
+ready_new_Data$x5StarReviews <- NULL
+ready_new_Data$ShippingWeight <- NULL
+ready_new_Data$ProductDepth <- NULL
+ready_new_Data$ProductWidth <- NULL
+ready_new_Data$ProductHeight <- NULL
+
+
+# %%%%%%%%%%%%%%% Model #5 rf %%%%%%%%%%%%%%% 
+set.seed(998)
+inTraining <- createDataPartition(ready_existing_Data$Volume, p = .8, list = FALSE)
+training <- ready_existing_Data[inTraining,]
+testing <- ready_existing_Data[-inTraining,]
+fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+rf5 <- train(Volume~., data = ready_existing_Data, method = "rf",trControl = fitControl)
+rf5 #R2  0.7501544 
+
+
+# %%%%%%%%%%%%%%% Predict #5 rf %%%%%%%%%%%%%%% 
+rf5pred <- predict(rf5, newdata = testing)
+rf5pred
+postResample(rf5pred, testing$Volume)
+plot(varImp(rf5))
+varImp(rf5)
+
+
+# %%%%%%%%%%%%%%% Model #6 SVM %%%%%%%%%%%%%%% 
+
+set.seed(998)
+inTraining <- createDataPartition(ready_existing_Data$Volume, p = .8, list = FALSE)
+training <- ready_existing_Data[inTraining,]
+testing <- ready_existing_Data[-inTraining,]
+fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+svm6 <- train(Volume~., data = ready_existing_Data, method = "svmLinear", trControl=fitControl)
+svm6 #R2 = 0.7485303   
+
+# %%%%%%%%%%%%%%% Predict #6 SVM %%%%%%%%%%%%%%% 
+svm6pred <- predict(svm6, newdata = testing)
+postResample(svm6pred, testing$Volume)
+
+# %%%%%%%%%%%%%%% Model #7 SVM2 **MIKE RECOMMENDED %%%%%%%%%%%%%%% 
+
+set.seed(998)
+inTraining <- createDataPartition(ready_existing_Data$Volume, p = .8, list = FALSE)
+training <- ready_existing_Data[inTraining,]
+testing <- ready_existing_Data[-inTraining,]
+fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+svm7 <- train(Volume~., data = ready_existing_Data, method = "svmLinear2", trControl=fitControl)
+svm7 #R2 = 0.7706734  
+
+# %%%%%%%%%%%%%%% Predict #7 SVM2 **MIKE RECOMMENDED%%%%%%%%%%%%%%% 
+svm7pred <- predict(svm7, newdata = testing)
+postResample(svm7pred, testing$Volume)
+
+# %%%%%%%%%%%%%%% Model #8 xgbLinear %%%%%%%%%%%%%%% 
+
+set.seed(998)
+inTraining <- createDataPartition(ready_existing_Data$Volume, p = .8, list = FALSE)
+training <- ready_existing_Data[inTraining,]
+testing <- ready_existing_Data[-inTraining,]
+fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+gb8 <- train(Volume~., data = ready_existing_Data, method = "xgbLinear", trControl=fitControl)
+gb8 #R2 = 0.7481261  
+
+# %%%%%%%%%%%%%%% Predict #8 xgbLinear %%%%%%%%%%%%%%% 
+gb8pred <- predict(gb8, newdata = testing)
+postResample(gb8pred, testing$Volume)
+
+
+# %%%%%%%%%%%%%%% BEST MODEL #5 rf %%%%%%%%%%%%%%% 
+#We will use model #5 to perform our predictions on the new data
+
+finalPred <- predict(rf5, newdata=ready_new_Data)
+finalPred
+summary(finalPred)
+plot(finalPred)
+output <- ready_new_Data 
+output$ready_new_Data <- finalPred
+write.csv(output, file="C3.T3output.csv", row.names = TRUE)
+

@@ -1,8 +1,12 @@
 # Discovering associations in customer transactions
-R | RStudio | Classification | Market Basket Analysis
+R | RStudio | Classification | Multiple Regression | Market Basket Analysis
 
 ## Project Overview 
-Use machine learning methods to predict which brand of computer customers prefer based on customer demographics collected from a marketing survey. Then determine associations between products that drive sales-oriented initiatives such as recommender systems like the ones used by Amazon and other eCommerce sites. 
+3 Objectives: 
+<ul>
+	<li>Classification: Use machine learning methods to predict which brand of computer customers prefer based on customer demographics collected from a marketing survey.</li>
+	<li>Multiple Regression: Assessing the impact services reviews and customer reviews have on sales of different product types
+	<li>Market Basket Analysis: Determine associations between products that drive sales-oriented initiatives such as recommender systems like the ones used by Amazon and other eCommerce sites.</li>
 
 ## Code & Resources
 <b>R RStudio</b>
